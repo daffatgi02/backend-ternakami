@@ -67,7 +67,7 @@ app.post('/api/auth/login', (req, res) => {
 });
 
 
-// Endpoint to make a prediction using the API
+// Endpoint untuk machine learning backend apps yang sudah di deploy
 app.post('/api/predict', async (req, res) => {
     try {
         if (!req.files || !req.files.image) {
