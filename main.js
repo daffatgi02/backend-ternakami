@@ -53,7 +53,11 @@ app.post('/api/auth/login', (req, res) => {
             return res.status(400).json({ error: true, message: 'Wrong Password or Account not found' });
         }
 
-        const token = jwt.sign({ id: result[0].id }, 'daffa123', { expiresIn: '24h' });
+        const token = jwt.sign(
+            { id: result[0].id, fullname: result[0].fullname }, // Menambahkan fullname
+            'daffa123', 
+            { expiresIn: '24h' }
+        );
         res.status(200).json({
             error: false,
             loginResult: {
@@ -80,24 +84,85 @@ const handleFlaskAPIError = (error) => {
 };
 
 app.post('/api/predict', (req, res) => {
-    if (!req.files || !req.files.image || !req.body.type) {
-        return res.status(400).json({ "error": "No image or type specified" });
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+        return res.status(401).json({ error: true, message: 'No token provided' });
     }
 
-    const formData = new FormData();
-    formData.append('image', req.files.image.data, req.files.image.name);
-    formData.append('type', req.body.type);
+    jwt.verify(token, 'daffa123', async (err, decoded) => {
+        if (err) {
+            return res.status(500).json({ error: true, message: 'Failed to authenticate token' });
+        }
 
-    axios.post('http://127.0.0.1:8080/predict', formData, { headers: formData.getHeaders() })
-        .then(response => res.json(response.data))
-        .catch(error => {
-            const { status, message } = handleFlaskAPIError(error);
-            res.status(status).json({ "error": message });
-        });
+        if (!req.files || !req.files.image || !req.body.type) {
+            return res.status(400).json({ "error": "No image or type specified" });
+        }
+
+        const animalName = req.body.animalName;
+        const animalType = req.body.type; // Tipe hewan
+        const userId = decoded.id;
+
+        const formData = new FormData();
+        formData.append('image', req.files.image.data, req.files.image.name);
+        formData.append('type', animalType);
+
+        axios.post('http://127.0.0.1:8080/predict', formData, { headers: formData.getHeaders() })
+            .then(response => {
+                const classificationResult = response.data.class; // Hasil klasifikasi
+
+                // Simpan nama hewan, tipe hewan, dan hasil klasifikasi ke database
+                db.query('INSERT INTO animal_history (userId, animalName, animalType, classificationResult) VALUES (?, ?, ?, ?)', 
+                         [userId, animalName, animalType, classificationResult], (err, result) => {
+                    if (err) {
+                        return res.status(500).json({ error: true, message: 'Error saving to history' });
+                    }
+                    res.json(response.data); // Kirim response ke user
+                });
+            })
+            .catch(error => {
+                const { status, message } = handleFlaskAPIError(error);
+                res.status(status).json({ "error": message });
+            });
+    });
 });
 
 
+//endpoint history
+app.get('/api/history', (req, res) => {
+    db.query('SELECT * FROM animal_history ORDER BY created_at DESC', (err, results) => {
+        if (err) {
+            return res.status(500).json({ error: true, message: 'Error fetching history' });
+        }
 
+        // Format hasil query dan kirim sebagai response
+        const formattedResults = results.map((item, index) => {
+            // Format tanggal
+            const date = new Date(item.created_at);
+            const formattedDate = date.toISOString().split('T')[0]; // Menghasilkan format 'YYYY-MM-DD'
+
+            return {
+                number: index + 1,
+                animalName: item.animalName,
+                animalType: item.animalType,
+                classificationResult: item.classificationResult,
+                date: formattedDate // Gunakan tanggal yang sudah diformat
+            };
+        });
+        res.json(formattedResults);
+    });
+});
+
+
+// Homepage Endpoint
+app.get('/api/homepage', (req, res) => {
+    const token = req.headers.authorization.split(' ')[1]; // Ambil token dari header
+    jwt.verify(token, 'daffa123', (err, decoded) => {
+        if (err) {
+            return res.status(401).json({ error: true, message: 'Unauthorized' });
+        }
+        res.json({ message: `Welcome, ${decoded.fullname}` }); // Tampilkan fullname
+    });
+});
 
 // Start Server
 const PORT = 3000;
