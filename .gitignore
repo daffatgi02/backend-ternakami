@@ -1,0 +1,63 @@
+# File build dan kompilasi
+*.log
+*.swp
+*.db
+*.sqlite
+*.sqlite3
+*.xlsx
+*.xls
+*.pdf
+*.doc
+*.docx
+
+# Direktori build
+__pycache__/
+build/
+dist/
+node_modules/
+bin/
+
+# Berkas konfigurasi
+*.config
+*.cfg
+*.conf
+*.yaml
+*.yml
+
+# Berkas sistem
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Berkas IDE/Editor
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Berkas pustaka dependensi
+vendor/
+node_modules/
+
+# Berkas log dan cache
+logs/
+cache/
+
+# Berkas otomatis yang dihasilkan
+*.log
+*.log.*
+*.bak
+*.swp
+*.lock
+
+# Berkas konfigurasi lokal
+.env
+
+# Berkas konfigurasi Python
+*.pyc
+
+# Berkas konfigurasi PHP
+*.phpc
+
+# Berkas konfigurasi Ruby
+*.gem
