@@ -4,6 +4,7 @@ const bodyParser = require('body-parser');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const axios = require('axios');
+const cors = require('cors');
 const fileUpload = require('express-fileupload');
 const FormData = require('form-data');
 require('dotenv').config()
@@ -11,6 +12,7 @@ require('dotenv').config()
 const app = express();
 app.use(bodyParser.json());
 app.use(fileUpload());
+app.use(cors());
 
 // MySQL Connection
 const db = mysql.createConnection({
