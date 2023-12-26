@@ -6,6 +6,7 @@ const bcrypt = require('bcryptjs');
 const axios = require('axios');
 const fileUpload = require('express-fileupload');
 const FormData = require('form-data');
+require('dotenv').config()
 
 const app = express();
 app.use(bodyParser.json());
@@ -68,28 +69,35 @@ app.post('/api/auth/login', (req, res) => {
 
 
 // Endpoint untuk machine learning backend apps yang sudah di deploy
-app.post('/api/predict', async (req, res) => {
-    try {
-        if (!req.files || !req.files.image || !req.body.type) {
-            return res.status(400).json({ error: "No image or type specified" });
-        }
-
-        const flaskApiUrl = 'http://{url-deployment-machinelearning}/predict';
-
-        // Kirim request ke Flask API
-        const response = await axios.post(flaskApiUrl, req.body, {
-            headers: {
-                'Content-Type': 'application/json',
-            },
-        });
-
-        // Kembalikan respons dari Flask API ke client
-        res.status(response.status).json(response.data);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "Terjadi Kesalahan di server" });
+const handleFlaskAPIError = (error) => {
+    if (error.response) {
+        return { status: 500, message: error.message };
+    } else if (error.request) {
+        return { status: 503, message: "Service API sedang diperbaiki, coba sesaat lagi" };
+    } else {
+        return { status: 500, message: "Error: " + error.message };
     }
+};
+
+app.post('/api/predict', (req, res) => {
+    if (!req.files || !req.files.image || !req.body.type) {
+        return res.status(400).json({ "error": "No image or type specified" });
+    }
+
+    const formData = new FormData();
+    formData.append('image', req.files.image.data, req.files.image.name);
+    formData.append('type', req.body.type);
+
+    axios.post('http://127.0.0.1:8080/predict', formData, { headers: formData.getHeaders() })
+        .then(response => res.json(response.data))
+        .catch(error => {
+            const { status, message } = handleFlaskAPIError(error);
+            res.status(status).json({ "error": message });
+        });
 });
+
+
+
 
 // Start Server
 const PORT = 3000;
