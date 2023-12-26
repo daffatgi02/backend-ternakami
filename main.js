@@ -70,25 +70,20 @@ app.post('/api/auth/login', (req, res) => {
 // Endpoint untuk machine learning backend apps yang sudah di deploy
 app.post('/api/predict', async (req, res) => {
     try {
-        if (!req.files || !req.files.image) {
-            return res.status(400).json({ error: "No image uploaded" });
+        if (!req.files || !req.files.image || !req.body.type) {
+            return res.status(400).json({ error: "No image or type specified" });
         }
 
-        // Create a FormData object to send the image
-        const formData = new FormData();
-        formData.append('image', req.files.image.data, {
-            filename: req.files.image.name,
-            contentType: req.files.image.mimetype,
-        });
+        const flaskApiUrl = 'http://{url-deployment-machinelearning}/predict';
 
-        // Make a POST request to the prediction API
-        const response = await axios.post('http://{url-deployment-machinelearning}/predict', formData, {
+        // Kirim request ke Flask API
+        const response = await axios.post(flaskApiUrl, req.body, {
             headers: {
-                ...formData.getHeaders(),
+                'Content-Type': 'application/json',
             },
         });
 
-        // Return the response from the prediction API to the client
+        // Kembalikan respons dari Flask API ke client
         res.status(response.status).json(response.data);
     } catch (error) {
         console.error(error);
