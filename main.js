@@ -82,7 +82,7 @@ app.post('/api/predict', async (req, res) => {
         });
 
         // Make a POST request to the prediction API
-        const response = await axios.post('http://{url-deployment-machinelearning}/api/predict', formData, {
+        const response = await axios.post('http://{url-deployment-machinelearning}/predict', formData, {
             headers: {
                 ...formData.getHeaders(),
             },
