@@ -32,9 +32,9 @@ def predict_image(image, interpreter, input_details, output_details, animal_type
     output = interpreter.get_tensor(output_details[0]['index'])
 
     if animal_type == "sapi":
-        predicted_class = "Mata sapi kamu Terjangkit Penyakit Pinkeye" if output[0][0] < 0.5 else "Mata sapi kamu Sehat!"
+        predicted_class = "Mata Sapi Terjangkit Penyakit Pinkeye" if output[0][0] < 0.5 else "Mata Sapi Sehat!"
     elif animal_type == "kambing":
-        predicted_class = "Mata kambing kamu Terjangkit Penyakit Pinkeye" if output[0][0] < 0.5 else "Mata kambing kamu Sehat!"
+        predicted_class = "Mata Kambing Terjangkit Penyakit Pinkeye" if output[0][0] < 0.5 else "Mata Kambing Sehat!"
     else:
         predicted_class = "Unknown Animal Type"
 
@@ -48,7 +48,7 @@ def predict():
 
     image_file = request.files['image']
     animal_type = request.form['type']
-    model_path = f"./model_{animal_type}.tflite"
+    model_path = f"model_machinelearning/model_{animal_type}.tflite"
 
     try:
         image = Image.open(image_file)
