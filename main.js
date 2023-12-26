@@ -104,17 +104,32 @@ app.post('/api/predict', async (req, res) => {
         formData.append('image', req.files.image.data, req.files.image.name);
         formData.append('type', animalType);
 
+        const imageFile = req.files.image;
+
+        // Validasi jenis ekstensi (hanya jpg dan jpeg yang diperbolehkan)
+        if (!['image/jpeg', 'image/jpg'].includes(imageFile.mimetype)) {
+            return res.status(400).json({ "error": "Only jpg and jpeg file types are allowed" });
+        }
+
+        // Validasi ukuran gambar (minimal 200KB dan maksimal 5MB)
+        const minSizeBytes = 200 * 1024; // 200KB
+        const maxSizeBytes = 5 * 1024 * 1024; // 5MB
+
+        if (imageFile.size < minSizeBytes || imageFile.size > maxSizeBytes) {
+            return res.status(400).json({ "error": "Image size must be between 200KB and 5MB" });
+        }
+
         const response = await axios.post('http://127.0.0.1:8080/predict', formData, { headers: formData.getHeaders() });
         const classificationResult = response.data.class; // Hasil klasifikasi
 
         // Simpan nama hewan, tipe hewan, dan hasil klasifikasi ke database
-        db.query('INSERT INTO animal_history (userId, animalName, animalType, classificationResult) VALUES (?, ?, ?, ?)', 
-                 [userId, animalName, animalType, classificationResult], (err, result) => {
-            if (err) {
-                return res.status(500).json({ error: true, message: 'Error saving to history' });
-            }
-            res.json(response.data); // Kirim response ke user
-        });
+        db.query('INSERT INTO animal_history (userId, animalName, animalType, classificationResult) VALUES (?, ?, ?, ?)',
+            [userId, animalName, animalType, classificationResult], (err, result) => {
+                if (err) {
+                    return res.status(500).json({ error: true, message: 'Error saving to history' });
+                }
+                res.json(response.data); // Kirim response ke user
+            });
     } catch (err) {
         const { status, message } = handleFlaskAPIError(err);
         res.status(status).json({ "error": message });
