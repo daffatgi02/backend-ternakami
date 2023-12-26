@@ -57,7 +57,7 @@
     }
     ```
 
-#### 3. Prediksi Menggunakan Machine Learning
+#### 3. Prediksi Menggunakan Backend FLASK API 
 
 - **Endpoint**: `/api/predict`
 - **Method**: POST
@@ -93,12 +93,11 @@
     [
       {
         "number": 1,
-        "animalName": "golang",
+        "animalName": "jeki",
         "animalType": "kambing",
         "classificationResult": "Mata Kambing Terjangkit Penyakit Pinkeye",
         "date": "2023-12-26"
       },
-      // ... lebih banyak riwayat
     ]
     ```
   - **Failure** (500 Internal Server Error):
