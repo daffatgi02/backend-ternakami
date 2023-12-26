@@ -48,7 +48,7 @@ def predict():
 
     image_file = request.files['image']
     animal_type = request.form['type']
-    model_path = f"model_machinelearning/model_{animal_type}.tflite"
+    model_path = f"./model_{animal_type}.tflite"
 
     try:
         image = Image.open(image_file)
