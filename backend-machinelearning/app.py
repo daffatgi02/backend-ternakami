@@ -41,7 +41,7 @@ def predict_image(image, interpreter, input_details, output_details, animal_type
     probability = output[0][0]
     return predicted_class, probability
 
-@app.route('/api/predict', methods=['POST'])
+@app.route('/predict', methods=['POST'])
 def predict():
     if 'image' not in request.files or 'type' not in request.form:
         return jsonify({'error': 'No image or type specified'}), 400
