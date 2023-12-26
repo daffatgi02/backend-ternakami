@@ -13,10 +13,10 @@ app.use(fileUpload());
 
 // MySQL Connection
 const db = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: '',
-    database: 'ternakami'
+    host: process.env.DB_HOST, // Use the environment variable
+    user: process.env.DB_USER, // Use the environment variable
+    password: process.env.DB_PASSWORD, // Use the environment variable
+    database: process.env.DB_DATABASE, // Use the environment variable
 });
 
 db.connect((err) => {
