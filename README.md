@@ -1,8 +1,5 @@
 # Dokumentasi API TernaKami
-
-### A. Backend Node.js
-
-### Dokumentasi API Backend Node.js
+## A. Dokumentasi API Backend Node.js
 
 #### 1. Registrasi Pengguna (User Registration)
 
@@ -145,7 +142,7 @@ Catatan:
 
 
 
-### B. Backend Python Flask (Aplikasi Serving Model Machine Learning)
+## B. Backend Python Flask (Aplikasi Serving Model Machine Learning)
 
 #### 1. Predict Endpoint
 - **URL**: `/predict`
