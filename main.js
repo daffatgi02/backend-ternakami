@@ -73,7 +73,6 @@ app.post('/api/auth/login', (req, res) => {
     });
 });
 
-
 // Endpoint untuk machine learning backend apps yang sudah di deploy
 const handleFlaskAPIError = (error) => {
     if (error.response) {
@@ -85,17 +84,14 @@ const handleFlaskAPIError = (error) => {
     }
 };
 
-app.post('/api/predict', (req, res) => {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) {
-        return res.status(401).json({ error: true, message: 'No token provided' });
-    }
-
-    jwt.verify(token, 'daffa123', async (err, decoded) => {
-        if (err) {
-            return res.status(500).json({ error: true, message: 'Failed to authenticate token' });
+app.post('/api/predict', async (req, res) => {
+    try {
+        const token = req.headers.authorization?.split(' ')[1];
+        if (!token) {
+            return res.status(401).json({ error: true, message: 'No token provided' });
         }
 
+        const decoded = await jwt.verify(token, 'daffa123');
         if (!req.files || !req.files.image || !req.body.type) {
             return res.status(400).json({ "error": "No image or type specified" });
         }
@@ -108,24 +104,21 @@ app.post('/api/predict', (req, res) => {
         formData.append('image', req.files.image.data, req.files.image.name);
         formData.append('type', animalType);
 
-        axios.post('http://127.0.0.1:8080/predict', formData, { headers: formData.getHeaders() })
-            .then(response => {
-                const classificationResult = response.data.class; // Hasil klasifikasi
+        const response = await axios.post('http://127.0.0.1:8080/predict', formData, { headers: formData.getHeaders() });
+        const classificationResult = response.data.class; // Hasil klasifikasi
 
-                // Simpan nama hewan, tipe hewan, dan hasil klasifikasi ke database
-                db.query('INSERT INTO animal_history (userId, animalName, animalType, classificationResult) VALUES (?, ?, ?, ?)', 
-                         [userId, animalName, animalType, classificationResult], (err, result) => {
-                    if (err) {
-                        return res.status(500).json({ error: true, message: 'Error saving to history' });
-                    }
-                    res.json(response.data); // Kirim response ke user
-                });
-            })
-            .catch(error => {
-                const { status, message } = handleFlaskAPIError(error);
-                res.status(status).json({ "error": message });
-            });
-    });
+        // Simpan nama hewan, tipe hewan, dan hasil klasifikasi ke database
+        db.query('INSERT INTO animal_history (userId, animalName, animalType, classificationResult) VALUES (?, ?, ?, ?)', 
+                 [userId, animalName, animalType, classificationResult], (err, result) => {
+            if (err) {
+                return res.status(500).json({ error: true, message: 'Error saving to history' });
+            }
+            res.json(response.data); // Kirim response ke user
+        });
+    } catch (err) {
+        const { status, message } = handleFlaskAPIError(err);
+        res.status(status).json({ "error": message });
+    }
 });
 
 
