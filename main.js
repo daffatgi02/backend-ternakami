@@ -147,7 +147,7 @@ app.get('/api/history', (req, res) => {
                 animalName: item.animalName,
                 animalType: item.animalType,
                 classificationResult: item.classificationResult,
-                date: formattedDate // Gunakan tanggal yang sudah diformat
+                date: formattedDate 
             };
         });
         res.json(formattedResults);
