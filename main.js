@@ -73,18 +73,23 @@ app.post('/api/auth/login', (req, res) => {
     });
 });
 
-// Endpoint untuk machine learning backend apps yang sudah di deploy
-const handleFlaskAPIError = (error) => {
-    if (error.response) {
-        return { status: 500, message: error.message };
-    } else if (error.request) {
-        return { status: 503, message: "Service API sedang diperbaiki, coba sesaat lagi" };
-    } else {
-        return { status: 500, message: "Error: " + error.message };
+// Endpoint untuk machine learning backend apps yang sudah di deploy// Utility function untuk memvalidasi file gambar
+const validateImageFile = (imageFile) => {
+    const minSizeBytes = 200 * 1024; // 200KB
+    const maxSizeBytes = 5 * 1024 * 1024; // 5MB
+    const validMimeTypes = ['image/jpeg', 'image/jpg'];
+
+    if (!validMimeTypes.includes(imageFile.mimetype)) {
+        throw new Error("Only jpg and jpeg file types are allowed");
+    }
+
+    if (imageFile.size < minSizeBytes || imageFile.size > maxSizeBytes) {
+        throw new Error("Image size must be between 200KB and 5MB");
     }
 };
 
-app.post('/api/predict', async (req, res) => {
+// Handler function untuk /api/predict endpoint
+const handlePredictEndpoint = async (req, res) => {
     try {
         const token = req.headers.authorization?.split(' ')[1];
         if (!token) {
@@ -96,35 +101,19 @@ app.post('/api/predict', async (req, res) => {
             return res.status(400).json({ "error": "No image or type specified" });
         }
 
-        const animalName = req.body.animalName;
-        const animalType = req.body.type; // Tipe hewan
-        const userId = decoded.id;
+        const imageFile = req.files.image;
+        validateImageFile(imageFile); // Memvalidasi file gambar
 
         const formData = new FormData();
-        formData.append('image', req.files.image.data, req.files.image.name);
-        formData.append('type', animalType);
-
-        const imageFile = req.files.image;
-
-        // Validasi jenis ekstensi (hanya jpg dan jpeg yang diperbolehkan)
-        if (!['image/jpeg', 'image/jpg'].includes(imageFile.mimetype)) {
-            return res.status(400).json({ "error": "Only jpg and jpeg file types are allowed" });
-        }
-
-        // Validasi ukuran gambar (minimal 200KB dan maksimal 5MB)
-        const minSizeBytes = 200 * 1024; // 200KB
-        const maxSizeBytes = 5 * 1024 * 1024; // 5MB
-
-        if (imageFile.size < minSizeBytes || imageFile.size > maxSizeBytes) {
-            return res.status(400).json({ "error": "Image size must be between 200KB and 5MB" });
-        }
+        formData.append('image', imageFile.data, imageFile.name);
+        formData.append('type', req.body.type);
 
         const response = await axios.post('http://127.0.0.1:8080/predict', formData, { headers: formData.getHeaders() });
         const classificationResult = response.data.class; // Hasil klasifikasi
 
-        // Simpan nama hewan, tipe hewan, dan hasil klasifikasi ke database
+        // Simpan hasil ke database
         db.query('INSERT INTO animal_history (userId, animalName, animalType, classificationResult) VALUES (?, ?, ?, ?)',
-            [userId, animalName, animalType, classificationResult], (err, result) => {
+            [decoded.id, req.body.animalName, req.body.type, classificationResult], (err, result) => {
                 if (err) {
                     return res.status(500).json({ error: true, message: 'Error saving to history' });
                 }
@@ -134,8 +123,10 @@ app.post('/api/predict', async (req, res) => {
         const { status, message } = handleFlaskAPIError(err);
         res.status(status).json({ "error": message });
     }
-});
+};
 
+// Endpoint untuk machine learning backend apps yang sudah di deploy
+app.post('/api/predict', handlePredictEndpoint);
 
 //endpoint history
 app.get('/api/history', (req, res) => {
