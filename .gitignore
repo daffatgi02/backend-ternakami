@@ -10,6 +10,8 @@
 *.doc
 *.docx
 
+*.html
+*.css
 # Direktori build
 __pycache__/
 build/
@@ -61,3 +63,4 @@ cache/
 
 # Berkas konfigurasi Ruby
 *.gem
+.gitignore

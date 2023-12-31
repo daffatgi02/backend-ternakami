@@ -28,22 +28,78 @@ db.connect((err) => {
 });
 
 // Register Endpoint
-app.post('/api/auth/register', (req, res) => {
-    const { email, password, fullname } = req.body;
-    db.query('SELECT email FROM users WHERE email = ?', [email], async (err, result) => {
-        if (err) throw err;
-
-        if (result.length > 0) {
-            return res.status(400).json({ error: true, message: 'Email already taken' });
-        } else {
-            const hashedPassword = await bcrypt.hash(password, 8);
-            db.query('INSERT INTO users (email, password, fullname) VALUES (?, ?, ?)', [email, hashedPassword, fullname], (err, result) => {
-                if (err) throw err;
-                res.status(200).json({ error: false, message: 'Berhasil Register Akun. Silahkan Login' });
-            });
-        }
+// Function to get user by email
+const getUserByEmail = (email) => {
+    return new Promise((resolve, reject) => {
+        db.query('SELECT email FROM users WHERE email = ?', [email], (err, result) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(result.length > 0 ? result[0] : null);
+            }
+        });
     });
-});
+};
+
+// Function to send success response
+const sendSuccessResponse = (res, statusCode, message) => {
+    res.status(statusCode).json({
+        error: false,
+        message: message,
+        statusCode: statusCode
+    });
+};
+
+// Function to send error response
+const sendErrorResponse = (res, statusCode, message) => {
+    res.status(statusCode).json({
+        error: true,
+        message: message,
+        statusCode: statusCode
+    });
+};
+
+// Function to insert user into database
+const insertUser = (email, hashedPassword, fullname) => {
+    return new Promise((resolve, reject) => {
+        db.query('INSERT INTO users (email, password, fullname) VALUES (?, ?, ?)', [email, hashedPassword, fullname], (err, result) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(result);
+            }
+        });
+    });
+};
+
+// Function to register a user
+const registerUser = async (req, res) => {
+    const { email, password, fullname } = req.body;
+
+    // Validasi input
+    if (!email || !password || !fullname) {
+        return sendErrorResponse(res, 400, 'Email, Password, and Fullname fields must all be filled');
+    }
+
+    try {
+        const existingUser = await getUserByEmail(email);
+
+        if (existingUser) {
+            return sendErrorResponse(res, 400, 'Email already taken');
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 8);
+        await insertUser(email, hashedPassword, fullname);
+
+        sendSuccessResponse(res, 201, 'Berhasil Register Akun. Silahkan Login');
+    } catch (error) {
+        sendErrorResponse(res, 500, 'Internal Server Error');
+    }
+};
+
+app.post('/api/auth/register', registerUser);
+
+
 
 // Login Endpoint
 app.post('/api/auth/login', (req, res) => {
