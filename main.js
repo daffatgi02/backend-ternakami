@@ -129,7 +129,8 @@ app.post('/api/auth/login', (req, res) => {
     });
 });
 
-// Endpoint untuk machine learning backend apps yang sudah di deploy// Utility function untuk memvalidasi file gambar
+// Endpoint untuk machine learning backend apps yang sudah di deploy
+// Utility function untuk memvalidasi file gambar
 const validateImageFile = (imageFile) => {
     const minSizeBytes = 200 * 1024; // 200KB
     const maxSizeBytes = 5 * 1024 * 1024; // 5MB
