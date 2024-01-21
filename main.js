@@ -7,6 +7,8 @@ const axios = require('axios');
 const cors = require('cors');
 const fileUpload = require('express-fileupload');
 const FormData = require('form-data');
+const moment = require('moment-timezone');
+
 require('dotenv').config()
 
 const app = express();
@@ -27,7 +29,8 @@ db.connect((err) => {
     console.log('Connected to MySQL');
 });
 
-// Register Endpoint
+// FUCNTION REGISTER =============
+
 // Function to get user by email
 const getUserByEmail = (email) => {
     return new Promise((resolve, reject) => {
@@ -38,24 +41,6 @@ const getUserByEmail = (email) => {
                 resolve(result.length > 0 ? result[0] : null);
             }
         });
-    });
-};
-
-// Function to send success response
-const sendSuccessResponse = (res, statusCode, message) => {
-    res.status(statusCode).json({
-        error: false,
-        message: message,
-        statusCode: statusCode
-    });
-};
-
-// Function to send error response
-const sendErrorResponse = (res, statusCode, message) => {
-    res.status(statusCode).json({
-        error: true,
-        message: message,
-        statusCode: statusCode
     });
 };
 
@@ -71,34 +56,49 @@ const insertUser = (email, hashedPassword, fullname) => {
         });
     });
 };
+//====================================================
 
-// Function to register a user
-const registerUser = async (req, res) => {
+
+//===============================ENDPOINT=============================================
+app.post('/api/auth/register', async (req, res) => {
     const { email, password, fullname } = req.body;
 
     // Validasi input
     if (!email || !password || !fullname) {
-        return sendErrorResponse(res, 400, 'Email, Password, and Fullname fields must all be filled');
+        return res.status(400).json({
+            error: true,
+            message: 'Email, Password, and Fullname fields must all be filled',
+            statusCode: 400
+        });
     }
 
     try {
         const existingUser = await getUserByEmail(email);
 
         if (existingUser) {
-            return sendErrorResponse(res, 400, 'Email already taken');
+            return res.status(400).json({
+                error: true,
+                message: 'Email already taken',
+                statusCode: 400
+            });
         }
 
         const hashedPassword = await bcrypt.hash(password, 8);
         await insertUser(email, hashedPassword, fullname);
 
-        sendSuccessResponse(res, 201, 'Berhasil Register Akun. Silahkan Login');
+        res.status(201).json({
+            error: false,
+            message: 'Berhasil Register Akun. Silahkan Login',
+            statusCode: 201
+        });
     } catch (error) {
-        sendErrorResponse(res, 500, 'Internal Server Error');
+        res.status(500).json({
+            error: true,
+            message: 'Internal Server Error',
+            statusCode: 500
+        });
     }
-};
-
-app.post('/api/auth/register', registerUser);
-
+});
 
 
 // Login Endpoint
@@ -129,86 +129,101 @@ app.post('/api/auth/login', (req, res) => {
     });
 });
 
-// Endpoint untuk machine learning backend apps yang sudah di deploy
-// Utility function untuk memvalidasi file gambar
-const validateImageFile = (imageFile) => {
-    const minSizeBytes = 200 * 1024; // 200KB
-    const maxSizeBytes = 5 * 1024 * 1024; // 5MB
-    const validMimeTypes = ['image/jpeg', 'image/jpg'];
-
-    if (!validMimeTypes.includes(imageFile.mimetype)) {
-        throw new Error("Only jpg and jpeg file types are allowed");
+//========================================================================================
+// Endpoint untuk melakukan prediksi
+app.post('/api/predict', (req, res) => {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+        return res.status(401).json({ error: true, message: 'No token provided' });
     }
 
-    if (imageFile.size < minSizeBytes || imageFile.size > maxSizeBytes) {
-        throw new Error("Image size must be between 200KB and 5MB");
-    }
-};
-
-// Handler function untuk /api/predict endpoint
-const handlePredictEndpoint = async (req, res) => {
-    try {
-        const token = req.headers.authorization?.split(' ')[1];
-        if (!token) {
-            return res.status(401).json({ error: true, message: 'No token provided' });
-        }
-
-        const decoded = await jwt.verify(token, 'daffa123');
-        if (!req.files || !req.files.image || !req.body.type) {
-            return res.status(400).json({ "error": "No image or type specified" });
-        }
-
-        const imageFile = req.files.image;
-        validateImageFile(imageFile); // Memvalidasi file gambar
-
-        const formData = new FormData();
-        formData.append('image', imageFile.data, imageFile.name);
-        formData.append('type', req.body.type);
-
-        const response = await axios.post('http://127.0.0.1:8080/predict', formData, { headers: formData.getHeaders() });
-        const classificationResult = response.data.class; // Hasil klasifikasi
-
-        // Simpan hasil ke database
-        db.query('INSERT INTO animal_history (userId, animalName, animalType, classificationResult) VALUES (?, ?, ?, ?)',
-            [decoded.id, req.body.animalName, req.body.type, classificationResult], (err, result) => {
-                if (err) {
-                    return res.status(500).json({ error: true, message: 'Error saving to history' });
-                }
-                res.json(response.data); // Kirim response ke user
-            });
-    } catch (err) {
-        const { status, message } = handleFlaskAPIError(err);
-        res.status(status).json({ "error": message });
-    }
-};
-
-// Endpoint untuk machine learning backend apps yang sudah di deploy
-app.post('/api/predict', handlePredictEndpoint);
-
-//endpoint history
-app.get('/api/history', (req, res) => {
-    db.query('SELECT * FROM animal_history ORDER BY created_at DESC', (err, results) => {
+    jwt.verify(token, 'daffa123', async (err, decoded) => {
         if (err) {
-            return res.status(500).json({ error: true, message: 'Error fetching history' });
+            return res.status(500).json({ error: true, message: 'Failed to authenticate token' });
         }
 
-        // Format hasil query dan kirim sebagai response
-        const formattedResults = results.map((item, index) => {
-            // Format tanggal
-            const date = new Date(item.created_at);
-            const formattedDate = date.toISOString().split('T')[0]; // Menghasilkan format 'YYYY-MM-DD'
+        if (!req.files || !req.files.image || !req.body.type || !req.body.Animal_Name) {
+            return res.status(400).json({ "error": "No image, type, or Animal_Name specified" });
+        }
 
-            return {
-                number: index + 1,
-                animalName: item.animalName,
-                animalType: item.animalType,
-                classificationResult: item.classificationResult,
-                date: formattedDate 
-            };
-        });
-        res.json(formattedResults);
+        const animalType = req.body.type; // Tipe hewan
+        const animalName = req.body.Animal_Name; // Nama hewan
+        const formData = new FormData();
+        formData.append('image', req.files.image.data, req.files.image.name);
+        formData.append('type', animalType);
+        formData.append('Animal_Name', animalName);
+
+        // Simpan data history
+        const created_at = moment().tz('Asia/Jakarta').format('YYYY-MM-DD HH:mm:ss');
+
+        // Lakukan prediksi
+        axios.post('http://127.0.0.1:8080/predict', formData, { headers: formData.getHeaders() })
+            .then(async response => {
+                const predictionResult = response.data;
+                const { class: predictionClass, probability } = predictionResult;
+
+                // Simpan data history
+                db.query(
+                    'INSERT INTO history (user_id, animal_type, animal_name, created_at, prediction_class, prediction_probability) VALUES (?, ?, ?, ?, ?, ?)',
+                    [decoded.id, animalType, animalName, created_at, predictionClass, probability],
+                    (error, result) => {
+                        if (error) {
+                            return res.status(500).json({ "error": "Error saving history" });
+                        }
+
+                        res.json(predictionResult); // Kirim response ke user
+                    }
+                );
+            })
+            .catch(error => {
+                let status = 500;
+                let message = "Error: " + error.message;
+
+                if (error.response) {
+                    status = 500;
+                    message = error.message;
+                } else if (error.request) {
+                    status = 503;
+                    message = "Service API sedang diperbaiki, coba sesaat lagi";
+                }
+
+                res.status(status).json({ "error": message });
+            });
     });
 });
+// Endpoint untuk melihat data history
+app.get('/api/history', (req, res) => {
+    const token = req.headers.authorization.split(' ')[1];
+    jwt.verify(token, 'daffa123', (err, decoded) => {
+        if (err) {
+            return res.status(401).json({ error: true, message: 'Unauthorized' });
+        }
+
+        // Ambil data history berdasarkan user_id
+        db.query('SELECT * FROM history WHERE user_id = ?', [decoded.id], (error, result) => {
+            if (error) {
+                return res.status(500).json({ "error": "Error fetching history" });
+            }
+
+            // Mengubah format waktu pada setiap data history
+            const formattedResult = result.map(item => {
+                const formattedCreatedAt = moment(item.created_at).tz('Asia/Jakarta').format('YYYY-MM-DD HH:mm:ss');
+                return {
+                    id: item.id,
+                    user_id: item.user_id,
+                    animal_type: item.animal_type,
+                    animal_name: item.animal_name,
+                    prediction_class: item.prediction_class,
+                    prediction_probability: item.prediction_probability,
+                    formatted_created_at: formattedCreatedAt
+                };
+            });
+
+            res.json(formattedResult); // Kirim data history dengan format waktu ke user
+        });
+    });
+});
+
 
 
 // Homepage Endpoint
