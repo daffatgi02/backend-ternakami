@@ -1,176 +1,216 @@
-# Dokumentasi API TernaKami
-## A. Dokumentasi API Backend Node.js
+# API Documentation TernaKami
 
-#### 1. Registrasi Pengguna (User Registration)
+## 1. Register <a name="register"></a>
 
-- **Endpoint**: `/api/auth/register`
-- **Method**: POST
-- **Body**:
-  - `email`: String (Email pengguna)
-  - `password`: String (Password pengguna)
-  - `fullname`: String (Nama lengkap pengguna)
-- **Response**: 
-  - **Success** (200 OK):
-    ```json
+### Endpoint
+```http
+POST /api/auth/register
+```
+
+### Request
+- **Method:** `POST`
+- **Headers:**
+  - `Content-Type: application/json`
+- **Body:**
+  ```json
+  {
+    "email": "user@example.com",
+    "password": "password123",
+    "fullname": "John Doe"
+  }
+  ```
+
+### Response
+- **Success (201):**
+  ```json
+  {
+    "message": "Successful Account Registration. Please Log In",
+    "statusCode": 201
+  }
+  ```
+- **Error (400):**
+  ```json
+  {
+    "message": "Email, Password, and Fullname fields must all be filled",
+    "statusCode": 400
+  }
+  ```
+  OR
+  ```json
+  {
+    "message": "Email already taken",
+    "statusCode": 400
+  }
+  ```
+- **Error (500):**
+  ```json
+  {
+    "message": "Internal Server Error",
+    "statusCode": 500
+  }
+  ```
+
+## 2. Login <a name="login"></a>
+
+### Endpoint
+```http
+POST /api/auth/login
+```
+
+### Request
+- **Method:** `POST`
+- **Headers:**
+  - `Content-Type: application/json`
+- **Body:**
+  ```json
+  {
+    "email": "user@example.com",
+    "password": "password123"
+  }
+  ```
+
+### Response
+- **Success (200):**
+  ```json
+  {
+    "loginResult": {
+      "email": "user@example.com",
+      "fullname": "John Doe",
+      "token": "<JWT_TOKEN>",
+      "userid": 1
+    },
+    "message": "Login Success"
+  }
+  ```
+- **Error (400):**
+  ```json
+  {
+    "message": "Wrong Password or Account not found"
+  }
+  ```
+- **Error (500):**
+  ```json
+  {
+    "message": "Internal Server Error"
+  }
+  ```
+
+## 3. Predict <a name="predict"></a>
+
+### Endpoint
+```http
+POST /api/predict
+```
+
+### Request
+- **Method:** `POST`
+- **Headers:**
+  - `Authorization: Bearer <JWT_TOKEN>`
+  - `Content-Type: multipart/form-data`
+- **Body:**
+  - `image` (File): Image file to be processed.
+  - `type` (String): Type of the animal.
+  - `Animal_Name` (String): Name of the animal.
+
+### Response
+- **Success (200):**
+  ```json
+  {
+    "class": "cat",
+    "probability": 0.85
+  }
+  ```
+- **Error (400):**
+  ```json
+  {
+    "error": "No image, type, or Animal_Name specified"
+  }
+  ```
+- **Error (401):**
+  ```json
+  {
+    "message": "No token provided"
+  }
+  ```
+- **Error (500):**
+  ```json
+  {
+    "error": "Error saving history"
+  }
+  ```
+
+## 4. History <a name="history"></a>
+
+### Endpoint
+```http
+GET /api/history
+```
+
+### Request
+- **Method:** `GET`
+- **Headers:**
+  - `Authorization: Bearer <JWT_TOKEN>`
+
+### Response
+- **Success (200):**
+  ```json
+  [
     {
-      "error": false,
-      "message": "Berhasil Register Akun. Silahkan Login"
-    }
-    ```
-  - **Failure** (400 Bad Request):
-    ```json
-    {
-      "error": true,
-      "message": "Email already taken"
-    }
-    ```
+      "id": 1,
+      "user_id": 1,
+      "animal_type": "cat",
+      "animal_name": "Whiskers",
+      "prediction_class": "cat",
+      "prediction_probability": 0.85,
+      "formatted_created_at": "2024-01-21 12:34:56"
+    },
+  ]
+  ```
+- **Error (401):**
+  ```json
+  {
+    "message": "Unauthorized"
+  }
+  ```
+- **Error (500):**
+  ```json
+  {
+    "error": "Error fetching history"
+  }
+  ```
 
-#### 2. Login Pengguna (User Login)
+## 5. Homepage <a name="homepage"></a>
 
-- **Endpoint**: `/api/auth/login`
-- **Method**: POST
-- **Body**:
-  - `email`: String
-  - `password`: String
-- **Response**: 
-  - **Success** (200 OK):
-    ```json
-    {
-      "error": false,
-      "loginResult": {
-        "email": "user@example.com",
-        "fullname": "Nama Pengguna",
-        "token": "<jwt_token>",
-        "userid": 1
-      },
-      "message": "Login Success"
-    }
-    ```
-  - **Failure** (400 Bad Request):
-    ```json
-    {
-      "error": true,
-      "message": "Wrong Password or Account not found"
-    }
-    ```
+### Endpoint
+```http
+GET /api/homepage
+```
 
-#### 3. Prediksi Menggunakan Backend FLASK API 
+### Request
+- **Method:** `GET`
+- **Headers:**
+  - `Authorization: Bearer <JWT_TOKEN>`
 
-- **Endpoint**: `/api/predict`
-- **Method**: POST
-- **Headers**:
-  - `Authorization`: `Bearer <jwt_token>`
-- **Body**: 
-  - `image`: File (Gambar hewan)
-  - `type`: String (Tipe hewan, misal: "sapi", "kambing")
-  - `animalName`: String (Nama hewan)
-- **Response**: 
-  - **Success** (200 OK): (Contoh response dari server Python Flask)
-    ```json
-    {
-      "class": "Mata Sapi Sehat!",
-      "probability": 0.95
-    }
-    ```
-  - **Failure** (400 Bad Request / 401 Unauthorized / 500 Internal Server Error):
-    ```json
-    {
-      "error": true,
-      "message": "<error_message>"
-    }
-    ```
+### Response
+- **Success (200):**
+  ```json
+  {
+    "message": "Welcome, John Doe"
+  }
+  ```
+- **Error (401):**
+  ```json
+  {
+    "message": "Token Expired or Unauthorized. Please Login/Register"
+  }
+  ```
+- **Error (500):**
+  ```json
+  {
+    "message": "Internal Server Error"
+  }
+  ```
 
-#### 4. Riwayat Prediksi (History)
+## Server Information
 
-- **Endpoint**: `/api/history`
-- **Method**: GET
-- **Response**: 
-  - **Success** (200 OK):
-    ```json
-    [
-      {
-        "number": 1,
-        "animalName": "jeki",
-        "animalType": "kambing",
-        "classificationResult": "Mata Kambing Terjangkit Penyakit Pinkeye",
-        "date": "2023-12-26"
-      },
-    ]
-    ```
-  - **Failure** (500 Internal Server Error):
-    ```json
-    {
-      "error": true,
-      "message": "Error fetching history"
-    }
-    ```
-
-#### 5. Homepage
-
-- **Endpoint**: `/api/homepage`
-- **Method**: GET
-- **Headers**:
-  - `Authorization`: `Bearer <jwt_token>`
-- **Response**: 
-  - **Success** (200 OK):
-    ```json
-    {
-      "message": "Welcome, Nama Pengguna"
-    }
-    ```
-
-### Struktur Database SQL
-
-#### Tabel `users`
-- `id`: INT PRIMARY KEY
-- `email`: VARCHAR(255)
-- `password`: VARCHAR(255)
-- `fullname`: VARCHAR(255)
-
-#### Tabel `animal_history`
-- `id`: INT PRIMARY KEY
-- `userId`: INT
-- `animalName`: VARCHAR(255)
-- `created_at`: TIMESTAMP
-- `animalType`: VARCHAR(255)
-- `classificationResult`: VARCHAR(255)
-
-Catatan:
-- Pastikan telah mengatur variabel lingkungan untuk database (DB_HOST, DB_USER, DB_PASSWORD, DB_DATABASE).
-- Pastikan token JWT (`yourkey-123`) dan rute server Flask (`http://127.0.0.1:8080/predict`) sesuai dengan konfigurasi.
-- Handle error secara tepat pada setiap endpoint untuk memastikan stabilitas dan keamanan API.
-
-
-
-## B. Backend Python Flask (Aplikasi Serving Model Machine Learning)
-
-#### 1. Predict Endpoint
-- **URL**: `/predict`
-- **Method**: `POST`
-- **Form Data**:
-  - `image`: file
-  - `type`: string (e.g., "sapi", "kambing")
-- **Response**:
-  - **Success**:
-    - **Status**: 200
-    - **Content**:
-      ```json
-      {
-        "class": "<predicted_class>",
-        "probability": <probability_value>
-      }
-      ```
-  - **Error**:
-    - **Status**: 400/500
-    - **Content**: *Dependent on error type*
-
-#### 2. Index Endpoint
-- **URL**: `/`
-- **Method**: `GET`
-- **Response**:
-  - **Content**: `'SERVICE API AKTIF'`
-
-### Catatan
-- Output JSON untuk setiap endpoint diberikan dalam format contoh. Nilai sebenarnya tergantung pada eksekusi API.
-- Pastikan untuk mengatur environment variables untuk koneksi database di backend Node.js.
-- Untuk Flask API, model dipilih berdasarkan `type` yang dikirimkan.
+The server is running on `http://localhost:3000`.
