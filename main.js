@@ -66,7 +66,6 @@ app.post('/api/auth/register', async (req, res) => {
     // Validasi input
     if (!email || !password || !fullname) {
         return res.status(400).json({
-            error: true,
             message: 'Email, Password, and Fullname fields must all be filled',
             statusCode: 400
         });
@@ -77,7 +76,6 @@ app.post('/api/auth/register', async (req, res) => {
 
         if (existingUser) {
             return res.status(400).json({
-                error: true,
                 message: 'Email already taken',
                 statusCode: 400
             });
@@ -87,13 +85,11 @@ app.post('/api/auth/register', async (req, res) => {
         await insertUser(email, hashedPassword, fullname);
 
         res.status(201).json({
-            error: false,
-            message: 'Berhasil Register Akun. Silahkan Login',
+            message: 'Successful Account Registration. Please Log In',
             statusCode: 201
         });
     } catch (error) {
         res.status(500).json({
-            error: true,
             message: 'Internal Server Error',
             statusCode: 500
         });
@@ -108,7 +104,7 @@ app.post('/api/auth/login', (req, res) => {
         if (err) throw err;
 
         if (result.length === 0 || !(await bcrypt.compare(password, result[0].password))) {
-            return res.status(400).json({ error: true, message: 'Wrong Password or Account not found' });
+            return res.status(400).json({   message: 'Wrong Password or Account not found' });
         }
 
         const token = jwt.sign(
@@ -117,7 +113,7 @@ app.post('/api/auth/login', (req, res) => {
             { expiresIn: '24h' }
         );
         res.status(200).json({
-            error: false,
+             
             loginResult: {
                 email: result[0].email,
                 fullname: result[0].fullname,
@@ -134,12 +130,12 @@ app.post('/api/auth/login', (req, res) => {
 app.post('/api/predict', (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) {
-        return res.status(401).json({ error: true, message: 'No token provided' });
+        return res.status(401).json({   message: 'No token provided' });
     }
 
     jwt.verify(token, 'daffa123', async (err, decoded) => {
         if (err) {
-            return res.status(500).json({ error: true, message: 'Failed to authenticate token' });
+            return res.status(500).json({   message: 'Failed to authenticate token' });
         }
 
         if (!req.files || !req.files.image || !req.body.type || !req.body.Animal_Name) {
@@ -184,7 +180,7 @@ app.post('/api/predict', (req, res) => {
                     message = error.message;
                 } else if (error.request) {
                     status = 503;
-                    message = "Service API sedang diperbaiki, coba sesaat lagi";
+                    message = "Service API is currently under maintenance, please try again shortly.";
                 }
 
                 res.status(status).json({ "error": message });
@@ -196,7 +192,7 @@ app.get('/api/history', (req, res) => {
     const token = req.headers.authorization.split(' ')[1];
     jwt.verify(token, 'daffa123', (err, decoded) => {
         if (err) {
-            return res.status(401).json({ error: true, message: 'Unauthorized' });
+            return res.status(401).json({   message: 'Unauthorized' });
         }
 
         // Ambil data history berdasarkan user_id
@@ -231,7 +227,7 @@ app.get('/api/homepage', (req, res) => {
     const token = req.headers.authorization.split(' ')[1]; // Ambil token dari header
     jwt.verify(token, 'daffa123', (err, decoded) => {
         if (err) {
-            return res.status(401).json({ error: true, message: 'Unauthorized' });
+            return res.status(401).json({   message: 'Token Expired or Unauthorized Please Login/Register' });
         }
         res.json({ message: `Welcome, ${decoded.fullname}` }); // Tampilkan fullname
     });
