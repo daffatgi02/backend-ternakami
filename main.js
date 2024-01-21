@@ -96,7 +96,31 @@ app.post('/api/auth/register', async (req, res) => {
     }
 });
 
+// Function to verify token
+const verifyToken = (req, res, next) => {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+        return res.status(401).json({ message: 'No token provided' });
+    }
 
+    jwt.verify(token, 'daffa123', (err, decoded) => {
+        if (err) {
+            if (err.name === 'TokenExpiredError') {
+                return res.status(401).json({ message: 'Token Expired Please Login!' });
+            } else {
+                return res.status(500).json({ message: 'Failed to authenticate token' });
+            }
+        }
+
+        req.decoded = decoded; // Attach the decoded user information to the request object
+        next(); // Move on to the next middleware or route handler
+    });
+};
+
+// Endpoint for testing token expiration
+app.get('/api/validation', verifyToken, (req, res) => {
+    res.json({ message: 'Token is still valid', decodedUser: req.decoded });
+});
 // Login Endpoint
 app.post('/api/auth/login', (req, res) => {
     const { email, password } = req.body;
@@ -110,7 +134,7 @@ app.post('/api/auth/login', (req, res) => {
         const token = jwt.sign(
             { id: result[0].id, fullname: result[0].fullname }, // Menambahkan fullname
             'daffa123', 
-            { expiresIn: '24h' }
+            { expiresIn: '7d' }
         );
         res.status(200).json({
              
@@ -127,7 +151,7 @@ app.post('/api/auth/login', (req, res) => {
 
 //========================================================================================
 // Endpoint untuk melakukan prediksi
-app.post('/api/predict', (req, res) => {
+app.post('/api/predict', verifyToken, (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) {
         return res.status(401).json({   message: 'No token provided' });
@@ -188,49 +212,40 @@ app.post('/api/predict', (req, res) => {
     });
 });
 // Endpoint untuk melihat data history
-app.get('/api/history', (req, res) => {
-    const token = req.headers.authorization.split(' ')[1];
-    jwt.verify(token, 'daffa123', (err, decoded) => {
-        if (err) {
-            return res.status(401).json({   message: 'Unauthorized' });
+app.get('/api/history', verifyToken, (req, res) => {
+    // Use decoded user information from the verifyToken middleware
+    const userId = req.decoded.id;
+
+    // Ambil data history berdasarkan user_id
+    db.query('SELECT * FROM history WHERE user_id = ?', [userId], (error, result) => {
+        if (error) {
+            return res.status(500).json({ "error": "Error fetching history" });
         }
 
-        // Ambil data history berdasarkan user_id
-        db.query('SELECT * FROM history WHERE user_id = ?', [decoded.id], (error, result) => {
-            if (error) {
-                return res.status(500).json({ "error": "Error fetching history" });
-            }
-
-            // Mengubah format waktu pada setiap data history
-            const formattedResult = result.map(item => {
-                const formattedCreatedAt = moment(item.created_at).tz('Asia/Jakarta').format('YYYY-MM-DD HH:mm:ss');
-                return {
-                    id: item.id,
-                    user_id: item.user_id,
-                    animal_type: item.animal_type,
-                    animal_name: item.animal_name,
-                    prediction_class: item.prediction_class,
-                    prediction_probability: item.prediction_probability,
-                    formatted_created_at: formattedCreatedAt
-                };
-            });
-
-            res.json(formattedResult); // Kirim data history dengan format waktu ke user
+        // Mengubah format waktu pada setiap data history
+        const formattedResult = result.map(item => {
+            const formattedCreatedAt = moment(item.created_at).tz('Asia/Jakarta').format('YYYY-MM-DD HH:mm:ss');
+            return {
+                id: item.id,
+                user_id: item.user_id,
+                animal_type: item.animal_type,
+                animal_name: item.animal_name,
+                prediction_class: item.prediction_class,
+                prediction_probability: item.prediction_probability,
+                formatted_created_at: formattedCreatedAt
+            };
         });
+
+        res.json(formattedResult); // Kirim data history dengan format waktu ke user
     });
 });
 
 
 
+
 // Homepage Endpoint
-app.get('/api/homepage', (req, res) => {
-    const token = req.headers.authorization.split(' ')[1]; // Ambil token dari header
-    jwt.verify(token, 'daffa123', (err, decoded) => {
-        if (err) {
-            return res.status(401).json({   message: 'Token Expired or Unauthorized Please Login/Register' });
-        }
-        res.json({ message: `Welcome, ${decoded.fullname}` }); // Tampilkan fullname
-    });
+app.get('/api/homepage',verifyToken, (req, res) => {
+    res.json({ message: `Welcome, ${req.decoded.fullname}` });
 });
 
 // Start Server
