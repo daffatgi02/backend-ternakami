@@ -1,0 +1,7 @@
+#ignore directory
+node_modules/
+
+#ignore dotenv
+
+key.json
+backend-ml/kambing_Modelvgg16.h5
